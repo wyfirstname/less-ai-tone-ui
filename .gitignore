@@ -1,0 +1,26 @@
+# 构建产物与打包
+*.zip
+dist/
+build/
+
+# 博文的单文件内嵌版本（体积大，由 md 源生成，不入库）
+博文预览.html
+博文-内嵌图片版.md
+
+# 工具与会话产物
+.playwright-cli/
+_selftest/
+.workbuddy/
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# 依赖与缓存（当前项目无需依赖，预置防误提交）
+node_modules/
+__pycache__/
+*.py[cod]
+*.log

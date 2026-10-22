@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>去AI味 · Less AI Tone</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --panel:#ffffff; --ink:#1c2330; --ink2:#5a6472; --line:#e4e7ec;
+    --accent:#2f6fed; --accent-soft:#eaf1fe; --warn:#c2410c; --warn-soft:#fff4ec;
+    --ok:#15803d; --ok-soft:#ecfaf0; --radius:12px; --mono:Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif;
+    background:var(--bg); color:var(--ink); font-size:14px; line-height:1.7;
+    display:flex; flex-direction:column;
+  }
+  header{
+    background:var(--panel); border-bottom:1px solid var(--line);
+    padding:14px 28px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  }
+  header .logo{font-size:20px; font-weight:700; letter-spacing:.5px;}
+  header .logo em{color:var(--accent); font-style:normal;}
+  header .sub{color:var(--ink2); font-size:12.5px;}
+  header .right{margin-left:auto; display:flex; gap:10px; align-items:center;}
+  .btn{
+    border:1px solid var(--line); background:var(--panel); color:var(--ink);
+    padding:7px 16px; border-radius:8px; cursor:pointer; font-size:13.5px;
+    transition:all .15s;
+  }
+  .btn:hover{border-color:var(--accent); color:var(--accent);}
+  .btn.primary{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .btn.primary:hover{background:#1f5ad4; color:#fff;}
+  .btn:disabled{opacity:.45; cursor:not-allowed;}
+  main{flex:1; display:flex; min-height:0; padding:18px 28px; gap:18px;}
+  .col{display:flex; flex-direction:column; min-height:0;}
+  .col.left{flex:0 0 40%;}
+  .col.right{flex:1;}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    display:flex; flex-direction:column; min-height:0; flex:1; overflow:hidden;
+  }
+  .card-head{
+    padding:10px 16px; border-bottom:1px solid var(--line); display:flex;
+    align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  .card-head h2{font-size:14.5px; font-weight:600;}
+  .card-head .spacer{flex:1;}
+  .input-area{flex:1; border:none; resize:none; padding:16px; font-size:14.5px;
+    font-family:inherit; line-height:1.9; outline:none; color:var(--ink); min-height:0;}
+  .input-area::placeholder{color:#aab2bd;}
+  .drop-hint{padding:6px 16px 12px; color:#9aa3af; font-size:12px;}
+  .stats{display:flex; gap:8px; flex-wrap:wrap; padding:10px 16px; border-bottom:1px solid var(--line);}
+  .chip{
+    font-size:12px; padding:3px 10px; border-radius:20px; background:var(--warn-soft);
+    color:var(--warn); border:1px solid #f5d5be; cursor:default; white-space:nowrap;
+  }
+  .chip.zero{background:#f2f4f7; color:#98a1ad; border-color:var(--line);}
+  .chip b{font-weight:700;}
+  .tabs{display:flex; gap:0; border-bottom:1px solid var(--line); background:#fafbfc;}
+  .tab{
+    padding:10px 22px; cursor:pointer; font-size:13.5px; color:var(--ink2);
+    border-bottom:2px solid transparent; user-select:none;
+  }
+  .tab.active{color:var(--accent); border-bottom-color:var(--accent); font-weight:600; background:var(--panel);}
+  .result-scroll{flex:1; overflow:auto; padding:18px 20px; min-height:0;}
+  .highlight-box{font-size:14.5px; line-height:2.05; white-space:pre-wrap; word-break:break-word;}
+  mark.r{background:#fdeaea; color:#b91c1c; border-bottom:2px solid #ef4444; padding:1px 0; cursor:pointer;}
+  mark.r:hover{background:#fbd5d5;}
+  .empty{color:#9aa3af; text-align:center; padding:60px 20px; font-size:13.5px;}
+  .finding{border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:12px; background:#fcfcfd;}
+  .finding .fhead{display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;}
+  .rule-tag{font-size:11.5px; font-weight:700; padding:2px 9px; border-radius:5px; background:var(--accent-soft); color:var(--accent); white-space:nowrap;}
+  .finding .loc{color:#9aa3af; font-size:11.5px;}
+  .finding .quote{font-size:13px; color:var(--ink); background:#fff7e8; border-left:3px solid #f5b04c; padding:4px 10px; border-radius:0 6px 6px 0; margin:6px 0; word-break:break-all;}
+  .finding .advice{font-size:12.5px; color:var(--ink2);}
+  .finding .advice b{color:var(--warn);}
+  /* AI panel */
+  .ai-settings{border-bottom:1px solid var(--line); background:#fafbfc; padding:12px 18px; display:none;}
+  .ai-settings.open{display:block;}
+  .ai-settings .grid{display:grid; grid-template-columns:130px 1fr 130px 1fr; gap:8px 10px; align-items:center; margin-bottom:8px;}
+  .ai-settings label{font-size:12.5px; color:var(--ink2); text-align:right;}
+  .ai-settings input, .ai-settings select{
+    border:1px solid var(--line); border-radius:7px; padding:6px 9px; font-size:13px; width:100%;
+    background:#fff; color:var(--ink); font-family:inherit;
+  }
+  .ai-settings input:focus, .ai-settings select:focus{outline:none; border-color:var(--accent);}
+  .ai-hint{font-size:11.5px; color:#9aa3af; margin-top:2px;}
+  .compare{display:flex; gap:0; min-height:0; flex:1;}
+  .compare .pane{flex:1; min-width:0; display:flex; flex-direction:column;}
+  .compare .pane + .pane{border-left:1px solid var(--line);}
+  .compare .pane-title{padding:8px 16px; font-size:12px; color:var(--ink2); border-bottom:1px solid var(--line); background:#fafbfc; display:flex; align-items:center; gap:8px;}
+  .compare .pane-body{flex:1; overflow:auto; padding:14px 18px; font-size:14px; line-height:1.95; white-space:pre-wrap; word-break:break-word;}
+  .spinner{display:inline-block; width:14px; height:14px; border:2px solid #cbd5e1; border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; vertical-align:-2px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .status-line{padding:8px 16px; font-size:12px; color:var(--ink2); border-top:1px solid var(--line); background:#fafbfc; min-height:32px; display:flex; align-items:center; gap:8px;}
+  dialog{
+    border:1px solid var(--line); border-radius:var(--radius); padding:0; max-width:760px; width:92%;
+    box-shadow:0 20px 60px rgba(0,0,0,.18); margin:auto;
+  }
+  dialog::backdrop{background:rgba(15,23,42,.35);}
+  .dlg-head{padding:14px 20px; border-bottom:1px solid var(--line); font-weight:600; font-size:15px; display:flex; justify-content:space-between; align-items:center;}
+  .dlg-body{padding:18px 22px; max-height:62vh; overflow:auto; font-size:13.5px; line-height:1.9;}
+  .dlg-body h3{font-size:13.5px; margin:14px 0 6px; color:var(--accent);}
+  .dlg-body h3:first-child{margin-top:0;}
+  .dlg-body p, .dlg-body li{color:#3a4350;}
+  .dlg-body ul{padding-left:20px;}
+  .foot-actions{padding:10px 16px; border-top:1px solid var(--line); display:flex; gap:10px; align-items:center;}
+  ::-webkit-scrollbar{width:9px; height:9px;}
+  ::-webkit-scrollbar-thumb{background:#d3d8df; border-radius:8px;}
+  ::-webkit-scrollbar-thumb:hover{background:#bcc3cd;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">去<em>AI</em>味 <span style="font-weight:400;font-size:13px;color:var(--ink2)">Less AI Tone</span></div>
+    <div class="sub">基于 283 万字人机对照语料的 11 条规则 · 白名单式改写 · 绿色免安装</div>
+  </div>
+  <div class="right">
+    <button class="btn" id="btn-load-sample">示例文本</button>
+    <button class="btn" id="btn-clear">清空</button>
+    <button class="btn" id="btn-about">关于规则</button>
+  </div>
+</header>
+
+<main>
+  <div class="col left">
+    <div class="card" id="drop-zone">
+      <div class="card-head">
+        <h2>原文输入</h2>
+        <span class="spacer"></span>
+        <span style="font-size:12px;color:var(--ink2)" id="char-count">0 字</span>
+      </div>
+      <textarea class="input-area" id="input" placeholder="把成稿粘贴进来，或拖入 .md / .txt 文件&#10;&#10;本工具按白名单规则只处理清单内的 11 项 AI 痕迹：未命中规则的句子逐字保留，标题层级、段落顺序、列表、表格与代码块位置不变。"></textarea>
+      <div class="drop-hint">支持拖拽 .md / .txt 文件到此处</div>
+      <div class="foot-actions">
+        <button class="btn primary" id="btn-detect">开始检测</button>
+        <span style="font-size:12px;color:var(--ink2)">本地正则引擎 · 文本不出本机</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col right">
+    <div class="card">
+      <div class="tabs">
+        <div class="tab active" data-tab="detect">检测结果</div>
+        <div class="tab" data-tab="ai">AI 改写</div>
+        <div style="flex:1"></div>
+        <div class="tab" id="tab-settings" style="border-bottom:none;">⚙ API 设置</div>
+      </div>
+
+      <!-- 检测结果 -->
+      <div id="pane-detect" style="flex:1;display:flex;flex-direction:column;min-height:0;">
+        <div class="stats" id="stats" style="display:none;"></div>
+        <div class="result-scroll" id="detect-view">
+          <div class="empty">粘贴原文后点击「开始检测」<br>引擎将按 11 条规则逐段扫描，标红处为命中的 AI 痕迹，点击可查看改法建议</div>
+        </div>
+        <div class="result-scroll" id="findings-view" style="display:none;"></div>
+      </div>
+
+      <!-- AI 改写 -->
+      <div id="pane-ai" style="flex:1;display:none;flex-direction:column;min-height:0;">
+        <div class="ai-settings" id="ai-settings">
+          <div class="grid">
+            <label>服务商预设</label>
+            <select id="cfg-preset">
+              <option value="deepseek">DeepSeek</option>
+              <option value="kimi">Kimi (Moonshot)</option>
+              <option value="zhipu">智谱 GLM</option>
+              <option value="siliconflow">SiliconFlow 硅基流动</option>
+              <option value="openai">OpenAI</option>
+              <option value="ollama">Ollama 本地模型</option>
+              <option value="custom">自定义 (OpenAI 兼容)</option>
+            </select>
+            <label>接口地址</label>
+            <input id="cfg-base" placeholder="https://api.deepseek.com/v1">
+            <label>API Key</label>
+            <input id="cfg-key" type="password" placeholder="sk-...">
+            <label>模型</label>
+            <input id="cfg-model" placeholder="deepseek-chat">
+          </div>
+          <div class="ai-hint">配置仅保存在本机浏览器 (localStorage)，请求由浏览器直连服务商，不经过任何第三方。若服务商不支持浏览器跨域 (CORS)，请改用 Ollama 本地模型。</div>
+        </div>
+        <div class="compare" style="flex:1;min-height:0;">
+          <div class="pane">
+            <div class="pane-title">改写结果
+              <span style="flex:1"></span>
+              <button class="btn" id="btn-copy" style="padding:3px 12px;font-size:12px;">复制</button>
+              <button class="btn" id="btn-download" style="padding:3px 12px;font-size:12px;">下载 .md</button>
+            </div>
+            <div class="pane-body" id="ai-output"><div class="empty">在左侧粘贴原文，点「开始 AI 改写」<br>改写严格遵循白名单与信息守恒：不新增事实，不删观点</div></div>
+          </div>
+          <div class="pane">
+            <div class="pane-title">原文对照</div>
+            <div class="pane-body" id="ai-origin" style="color:var(--ink2);"><div class="empty">（对照原文）</div></div>
+          </div>
+        </div>
+        <div class="foot-actions">
+          <button class="btn primary" id="btn-ai-run">开始 AI 改写</button>
+          <button class="btn" id="btn-ai-stop" disabled>停止</button>
+          <span style="font-size:12px;color:var(--ink2)" id="ai-status"></span>
+        </div>
+        <div class="status-line" id="ai-progress"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<dialog id="dlg-about">
+  <div class="dlg-head">规则来源与说明 <span style="cursor:pointer;font-weight:400;color:var(--ink2)" onclick="document.getElementById('dlg-about').close()">✕</span></div>
+  <div class="dlg-body">
+    <h3>来源</h3>
+    <p>规则集来自开源项目 <b>lieflat-less-ai-tone</b>：以 629 篇文章（282.7 万汉字、95,551 句）做人机对照统计，其中 300 篇由五个主流模型受控生成、329 篇为人类作者文本。检验了 26 项候选"AI 文风"特征，<b>11 项通过检验</b>，区分力最强者为「段首零回指评论」（4.4 倍）。</p>
+    <p>同样重要：15 项流行认知<b>未通过检验</b>——句长均匀度、设问、比喻、句内排比、单字虚词等，人类用得不比 AI 少甚至更多。本工具绝不据此改文字。</p>
+    <h3>11 条规则（按优先级）</h3>
+    <ul>
+      <li><b>1 翻案腔</b>（R=3.4）：「不是A而是B」先立误解再推翻 → 直接正面下判断</li>
+      <li><b>2 顿号罗列过密</b>（R=1.8）：一句内顿号串起三项以上 → 概括或改变其中一项句法</li>
+      <li><b>3 相邻句结构同款</b>（R=2.0）：连续句同一句法骨架 → 打散其中一句</li>
+      <li><b>4 破折号滥用</b>（R=3.0）：揭晓式破折号 → 改逗号句号，直接写完整句</li>
+      <li><b>5 冒号滥用</b>（R=3.8/9.4）：提示语冒号、空转句引列表 → 删提示语或换标点</li>
+      <li><b>6 序数词当小标题</b>（R=3.1）：「一、二、三」通篇编号 → 删编号留文字</li>
+      <li><b>7 拟人化喻体</b>（R=7.3）：「像一位智慧的导师」→ 换成实际做了什么</li>
+      <li><b>8 概括覆盖已有数据</b>：原文有具体数字时不得用「显著提升」盖掉；「完成了对……的……」恢复动词</li>
+      <li><b>9 禁用起手式</b>（R=3.2）：「说白了」「说穿了」「先说结论」→ 删掉直接给判断</li>
+      <li><b>10 翻译腔</b>（仅五种）：过长前置定语 / 当…时 / 对于…来说 / 句首连接词 / 这意味着</li>
+      <li><b>11 段首零回指评论</b>（R=4.4）：段首「听起来/值得注意的是…」缺回指 → 补「这」</li>
+    </ul>
+    <h3>硬性边界</h3>
+    <ul>
+      <li><b>白名单</b>：未命中规则的句子逐字保留，不顺便润色</li>
+      <li><b>信息守恒</b>：不新增姓名、数字、日期、引语、因果；不删观点、限定词（「可能」不能改成「一定」）</li>
+      <li><b>框架不动</b>：标题层级、段落顺序、列表、表格、代码块位置原样保留</li>
+    </ul>
+    <p style="margin-top:12px;color:var(--ink2);font-size:12px;">本地检测引擎为正则启发式，覆盖各规则的字面触发标记；语义层判断（比喻是否贴切、案例是否堆砌）按原项目约定不处理。AI 改写模式把完整规则集注入系统提示词由大模型执行，效果更好。</p>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+/* ============================================================
+   去AI味 · Less AI Tone —— 网页版绿色单文件实现
+   规则来源: github.com/larashero3-dotcom/lieflat-less-ai-tone (MIT)
+   ============================================================ */
+
+/* ---------------- 11 条规则的本地检测引擎 ---------------- */
+const RULE_META = {
+  1:{name:"翻案腔", ratio:"R=3.4", advice:"从正面直接下判断：先给判断，再给依据。删掉「不是A而是B」的翻案结构。"},
+  2:{name:"顿号罗列过密", ratio:"R=1.8", advice:"能概括就别逐项列举；必须保留时，改变其中一项的句法，不让它们排成同一结构。"},
+  3:{name:"相邻句结构同款", ratio:"R=2.0", advice:"打散其中一句的句法：合并、拆分、换语序或改成短句。三个平级案例在凑数时合并同类项。"},
+  4:{name:"破折号滥用", ratio:"R=3.0", advice:"直接写完整句子，或改用逗号和句号。"},
+  5:{name:"冒号滥用", ratio:"R=3.8/9.4", advice:"提示语不承担信息时删掉它直接写内容；在承接上文时保留提示语，只把冒号换成句号或逗号。"},
+  6:{name:"序数词当小标题", ratio:"R=3.1", advice:"删掉「一、二、三」编号，保留小标题原有文字。正文里的「首先…其次」不算，不要动。"},
+  7:{name:"拟人化喻体", ratio:"R=7.3", advice:"换成这东西实际做了什么，或改用一个具体的人当喻体。"},
+  8:{name:"概括覆盖已有数据", ratio:"反向0.35", advice:"把原文已有的具体数值提到概括词的位置；「完成了对…的…」「实现了…的提升」恢复动词。原文没有数据时禁止编造。"},
+  9:{name:"禁用起手式", ratio:"R=3.2", advice:"删掉「说白了/说穿了/先说结论」，直接给判断。"},
+  10:{name:"翻译腔", ratio:"R=2.6-5.3", advice:"只处理五种结构：过长前置定语、「当…时」从句、前置话题壳、句首连接词、「这意味着」复述句。其他生硬表达一律保留。"},
+  11:{name:"段首零回指评论", ratio:"R=4.4", advice:"补一个回指词（多数情况加一个「这」字），或点明评论对象。"}
+};
+
+function ruleDetect(text){
+  const F=[]; // findings
+  const push=(rule,start,end,quote,extra)=>{ if(end>start) F.push({rule,start,end,quote:quote||text.slice(start,end),extra:extra||""}); };
+
+  /* 1. 翻案腔 */
+  {
+    const re=/(不是|并非|不在于|不只是在|与其说|表面[上下]?[^，。；！？]{0,6}(?:看|来说)?|看似|你以为|说到底|回头才发现|答案恰恰相反)[^。！？\n；]{0,60}?(而是|不如说|而是在|而在于|而是说|，是|。而是|其实是|其实是|其实，|恰恰是)/g;
+    let m; while((m=re.exec(text))){ push(1,m.index,m.index+m[0].length); }
+    const re2=/(你以为)[^。！？\n]{0,60}?(其实|实际上)/g;
+    while((m=re2.exec(text))){ push(1,m.index,m.index+m[0].length); }
+    const re3=/([^，。！？\n]{1,20})不重要[，,][^。！？\n]{0,10}(重要的是|关键的是|关键是)/g;
+    while((m=re3.exec(text))){ push(1,m.index,m.index+m[0].length); }
+  }
+
+  /* 2. 顿号罗列过密：一个分句内两个以上顿号 */
+  {
+    const clauseRe=/[^。！？；\n]+/g; let m;
+    while((m=clauseRe.exec(text))){
+      const seg=m[0]; const cnt=(seg.match(/、/g)||[]).length;
+      if(cnt>=2 && seg.length>=6){
+        // 定位整个顿号串
+        const first=seg.indexOf("、");
+        push(2,m.index,m.index+seg.length,seg.trim(),"该分句含 "+cnt+" 个顿号");
+      }
+    }
+  }
+
+  /* 3. 相邻句结构同款（轻量启发式）：段内连续3句逗号数相同且长度接近 */
+  {
+    const paras=text.split(/\n+/);
+    let off=0;
+    for(const p of paras){
+      if(p.trim().length>=30 && !p.trim().startsWith("#") && !p.trim().startsWith(">") && !/^\s*[-*\d]/.test(p.trim())){
+        const sents=p.split(/(?<=[。！？])/).filter(s=>s.trim().length>=8);
+        for(let i=0;i+2<sents.length;i++){
+          const a=sents[i],b=sents[i+1],c=sents[i+2];
+          const ca=(a.match(/，/g)||[]).length, cb=(b.match(/，/g)||[]).length, cc=(c.match(/，/g)||[]).length;
+          const la=a.replace(/[，。！？]/g,"").length, lb=b.replace(/[，。！？]/g,"").length, lc=c.replace(/[，。！？]/g,"").length;
+          if(ca===cb&&cb===cc&&ca>=1&&Math.abs(la-lb)<=Math.max(la,lb)*0.25&&Math.abs(lb-lc)<=Math.max(lb,lc)*0.25){
+            const localStart=p.indexOf(a);
+            if(localStart>=0) push(3,off+localStart,off+localStart+a.length+b.length+c.length,(a+" "+b+" "+c).trim().slice(0,120)+"…","连续三句逗号数与句长高度一致，疑似同一句法骨架");
+            i+=2;
+          }
+        }
+      }
+      off+=p.length+1;
+    }
+  }
+
+  /* 4. 破折号 */
+  {
+    const re=/——|―—|─—|—/g; let m;
+    while((m=re.exec(text))){ push(4,m.index,m.index+m[0].length); }
+  }
+
+  /* 5. 冒号滥用 */
+  {
+    // 5a 提示语冒号
+    const re=/(一句话总结|一句话概括|核心是|核心在于|关键在于|关键是|原因如下|原因有两个|原因有三|结论是|结论：|本质[上]?[是：]?|换句话说|简而言之|答案是|答案很简单|重点在于)[：:]/g;
+    let m; while((m=re.exec(text))){ push(5,m.index,m.index+m[0].length); }
+    // 5b 空转句引列表：行尾冒号 + 下一行是列表项
+    const lines=text.split("\n"); let off=0;
+    for(let i=0;i<lines.length;i++){
+      const line=lines[i];
+      if(/^[^#>\-\*\d].{4,60}[：:]\s*$/.test(line.trim()) && i+1<lines.length && /^\s*([-*+]|\d+[.、])\s/.test(lines[i+1].trim())){
+        push(5,off,off+line.length,line.trim(),"空转句：整句只为宣布下面有个列表");
+      }
+      off+=line.length+1;
+    }
+  }
+
+  /* 6. 序数词当小标题（通篇编号三个以上，允许被正文隔开） */
+  {
+    const lines=text.split("\n"); let off=0; const hits=[];
+    const cn={"一":1,"二":2,"三":3,"四":4,"五":5,"六":6,"七":7,"八":8,"九":9,"十":10,"十一":11,"十二":12,"十三":13,"十四":14,"十五":15,"十六":16,"十七":17,"十八":18,"十九":19,"二十":20};
+    for(const line of lines){
+      const t=line.trim();
+      const m=t.match(/^(#{1,6}\s*)?(?:第)?([一二三四五六七八九十]+|\d+)[、.．]\s*\S/);
+      if(m && (t.startsWith("#")||/^\*\*.*\*\*$/.test(t)||(!t.startsWith("#")&&t.length<=30))){
+        const v=m[2];
+        const num=cn[v]||(/^\d+$/.test(v)?parseInt(v,10):0);
+        if(num>0) hits.push({s:off,e:off+line.length,t:line,num});
+      }
+      off+=line.length+1;
+    }
+    if(hits.length>=3 && new Set(hits.map(h=>h.num)).size>=3){
+      for(const h of hits) push(6,h.s,h.e,h.t,"通篇序数词编号共 "+hits.length+" 处（按步骤/法规组织的编号有指代功能时可不改）");
+    }
+  }
+
+  /* 7. 拟人化喻体 */
+  {
+    const re=/(像|就像|好比|如同|宛如|相当于|仿佛)[一个位][^，。！？\n]{0,4}?(智慧的|聪明的|永不?[疲倦停][^，。！？\n]{0,3}的?|全能的|贴身的|忠实的|无私的|不知疲倦的|尽职尽责的|经验丰富的)?(导师|老师|秘书|助手|助理|顾问|管家|管家婆|审查员|审核员|实习生|向导|领航员|守门员|伙伴|朋友|军师|智囊|管家)/g;
+    let m; while((m=re.exec(text))){ push(7,m.index,m.index+m[0].length); }
+  }
+
+  /* 8. 概括覆盖已有数据 / 名词化 */
+  {
+    const re=/(完成了对[^。！？\n]{0,16}的|实现了[^。！？\n]{0,12}的提升|进行了[^。！？\n]{0,12}的(?:优化|调整|改进|改造|升级|梳理|完善)|做出了[^。！？\n]{0,12}的(?:优化|调整|改进))/g;
+    let m; while((m=re.exec(text))){ push(8,m.index,m.index+m[0].length); }
+  }
+
+  /* 9. 禁用起手式 */
+  {
+    const re=/^\s*(说白了[，,]?|说穿了[，,]?|先说结论[：,:]?)|([。！？\n]\s*)(说白了|说穿了|先说结论)[，,]?/g;
+    let m; while((m=re.exec(text))){ push(9,m.index,m.index+m[0].length); }
+  }
+
+  /* 10. 翻译腔（五种） */
+  {
+    // 10a 过长前置定语：的…的…的 嵌套
+    let m; const reA=/[^，。！？；\n]{2,12}的[^，。！？；\n]{2,12}的[^，。！？；\n]{2,16}的/g;
+    while((m=reA.exec(text))){ push(10,m.index,m.index+m[0].length,m[0],"过长前置定语：中心名词前「的」字连续叠加"); }
+    // 10b 当…时
+    const reB=/当[^，。！？\n]{4,40}时[，,]/g;
+    while((m=reB.exec(text))){ push(10,m.index,m.index+m[0].length,m[0],"「当……时」前置时间从句：删掉「当」和「时」，让从句直接作前一分句"); }
+    // 10c 前置话题壳
+    const reC=/(对于|对)[^，。！？\n]{2,16}(来说|而言)[，,]|就[^，。！？\n]{2,16}而言[，,]|在[^，。！？\n]{2,14}方面[，,]/g;
+    while((m=reC.exec(text))){ push(10,m.index,m.index+m[0].length,m[0],"前置话题壳：把对象直接放到主语或话题位，删掉壳子"); }
+    // 10d 句首连接词
+    const reD=/(^|\n)(然而|因此|此外|与此同时|换言之|总而言之|与此同时)[，,]/g;
+    while((m=reD.exec(text))){ const s=m.index+(m[1]?m[1].length:0); push(10,s,s+m[0].length-(m[1]?m[1].length:0),m[0].trim(),"句首连接词当路标：移到主语后面，或换成「不过/其实/也」"); }
+    // 10e 这意味着
+    const reE=/这(意味着|表明|说明|就[是意]味着)[，,]?/g;
+    while((m=reE.exec(text))){ push(10,m.index,m.index+m[0].length,m[0],"「这意味着」式复述句：后面与前句同义时，并入前一句或删掉提示语"); }
+  }
+
+  /* 11. 段首零回指评论 */
+  {
+    const paras=text.split(/\n/); let off=0;
+    const starters=/^(听起来|看起来|说白了|值得注意的是|值得一提的是|更重要的是|更关键的是|关键在于|问题在于|意味着|不难看出|由此可见|显然)/;
+    for(let i=0;i<paras.length;i++){
+      const p=paras[i]; const t=p.trim();
+      if(i>0 && t.length>=6 && !t.startsWith("#") && !t.startsWith(">") && !/^\s*[-*\d]/.test(t) && starters.test(t)){
+        const hasAnaphor=/^[^，。；！？]{0,14}(这|那|其|此|上面|上述|前者|后者)/.test(t);
+        if(!hasAnaphor){
+          const local=t.length-p.length; // skip leading spaces
+          push(11,off+local,off+local+Math.min(t.length,16),t.slice(0,16)+"…","段首评论缺回指成分");
+        }
+      }
+      off+=p.length+1;
+    }
+  }
+
+  /* 排序去重叠 */
+  F.sort((a,b)=>a.start-b.start || (b.end-b.start)-(a.end-a.start));
+  const out=[]; let lastEnd=-1;
+  for(const f of F){ if(f.start>=lastEnd){ out.push(f); lastEnd=f.end; } }
+  return out;
+}
+
+/* ---------------- 渲染 ---------------- */
+const $=id=>document.getElementById(id);
+const inputEl=$("input"), statsEl=$("stats"), detectView=$("detect-view"), findingsView=$("findings-view");
+let currentFindings=[], currentText="";
+
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function renderDetect(){
+  currentText=inputEl.value;
+  currentFindings=ruleDetect(currentText);
+  // 统计
+  const byRule={}; for(const f of currentFindings){ byRule[f.rule]=(byRule[f.rule]||0)+1; }
+  let html="";
+  for(let r=1;r<=11;r++){
+    const n=byRule[r]||0; const meta=RULE_META[r];
+    html+='<span class="chip '+(n?'':'zero')+'" title="'+meta.advice+'"><b>'+r+" "+meta.name+"</b> "+n+"</span>";
+  }
+  statsEl.innerHTML=html; statsEl.style.display="flex";
+  // 高亮正文
+  if(!currentText.trim()){ detectView.innerHTML='<div class="empty">请先在左侧粘贴原文</div>'; findingsView.innerHTML=""; switchFindings(); return; }
+  let h="", pos=0;
+  for(const f of currentFindings){
+    h+=esc(currentText.slice(pos,f.start));
+    h+='<mark class="r" data-rid="'+f.rule+'" title="规则'+f.rule+' '+RULE_META[f.rule].name+'">'+esc(currentText.slice(f.start,f.end))+"</mark>";
+    pos=f.end;
+  }
+  h+=esc(currentText.slice(pos));
+  detectView.innerHTML='<div class="highlight-box">'+h+"</div>";
+  // 问题清单
+  let fh="";
+  if(currentFindings.length===0) fh='<div class="empty" style="padding:30px">✓ 未发现清单内 11 项 AI 痕迹的触发标记。<br>注意：语义层问题（比喻贴切度、案例堆砌）不在正则引擎能力范围内。</div>';
+  currentFindings.forEach((f,i)=>{
+    const meta=RULE_META[f.rule];
+    fh+='<div class="finding" data-i="'+i+'">'
+      +'<div class="fhead"><span class="rule-tag">规则'+f.rule+" · "+meta.name+"</span><span class='loc'>"+meta.ratio+" · 位置约 "+f.start+" 字符</span></div>"
+      +'<div class="quote">'+esc(f.quote.length>160?f.quote.slice(0,160)+"…":f.quote)+"</div>"
+      +(f.extra?'<div class="advice">'+esc(f.extra)+"</div>":"")
+      +'<div class="advice"><b>改法：</b>'+esc(meta.advice)+"</div>"
+      +"</div>";
+  });
+  findingsView.innerHTML=fh;
+  switchFindings();
+  detectView.querySelectorAll("mark.r").forEach(mk=>{
+    mk.addEventListener("click",()=>{
+      switchFindings(true);
+      const i=currentFindings.findIndex(f=>f.start===+mk.dataset.start);
+      const el=findingsView.querySelector('.finding[data-i="'+i+'"]');
+      if(el){ el.scrollIntoView({behavior:"smooth",block:"center"}); el.style.background="var(--accent-soft)"; setTimeout(()=>el.style.background="",1200); }
+    });
+  });
+}
+function switchFindings(showFindings){
+  findingsView.style.display=showFindings?"block":"none";
+  if(!showFindings) detectView.style.display="block";
+}
+// 简化：提供两个子视图切换按钮
+(function(){
+  const head=document.querySelector(".tabs");
+  const toggle=document.createElement("div");
+  toggle.style.cssText="display:flex;gap:8px;align-items:center;padding-right:14px;";
+  toggle.innerHTML='<button class="btn" id="vw-hl" style="padding:3px 12px;font-size:12px;">高亮视图</button><button class="btn" id="vw-ls" style="padding:3px 12px;font-size:12px;">问题清单</button>';
+  head.appendChild(toggle);
+  $("vw-hl").onclick=()=>{ detectView.style.display="block"; findingsView.style.display="none"; };
+  $("vw-ls").onclick=()=>{ detectView.style.display="none"; findingsView.style.display="block"; };
+})();
+
+/* ---------------- AI 改写 ---------------- */
+const PRESETS={
+  deepseek:{base:"https://api.deepseek.com/v1",model:"deepseek-chat"},
+  kimi:{base:"https://api.moonshot.cn/v1",model:"moonshot-v1-32k"},
+  zhipu:{base:"https://open.bigmodel.cn/api/paas/v4",model:"glm-4-plus"},
+  siliconflow:{base:"https://api.siliconflow.cn/v1",model:"deepseek-ai/DeepSeek-V3"},
+  openai:{base:"https://api.openai.com/v1",model:"gpt-4o"},
+  ollama:{base:"http://localhost:11434/v1",model:"qwen2.5:14b",nokey:true},
+  custom:{base:"",model:""}
+};
+// 完整规则系统提示词（源自 SKILL.md，白名单 + 信息守恒 + 11 条规则）
+const SYSTEM_PROMPT = [
+"你是「去AI味」改写引擎。识别并改写文本中的 AI 写作痕迹。规则基于人类文章与多个模型输出的实测对比整理，每条都有可定位的触发标记。先判断体裁，再处理 AI 味。不能为了「像人写的」强加人称、口语或短段落。",
+"",
+"## 硬性边界（最高优先级）",
+"采用白名单式改写。只能处理下列 11 条规则，不能凭一般写作经验修改其他内容。没有命中任何规则的句子必须逐字保留。一句话即使命中规则，也只能改动解决该问题所必需的部分。不得顺便润色，不得替换没有问题的词语，不得调整语气、详略或信息密度。没有把握时保持原文。",
+"文章结构不在处理范围内。标题层级、章节顺序、段落数量与顺序、列表、表格、引用和代码块的位置必须原样保留。不得概括、扩写、删减观点或重组论证。",
+"信息守恒——以下内容绝不能凭改写添加：姓名、机构名、职务、地名；数字、比例、金额、时长、次数；日期、时间、先后顺序；引语、对话、别人的说法；引用来源、出处、链接；因果、动机、心理活动；任何原文没写的细节。反方向同样禁止：不能删掉原文的观点、结论、限定词和让步（「可能」「通常」「据说」）。把「可能提升」改成「提升」属于篡改判断强度。判断办法：改写后每个实词都要能在原文里指出出处，指不出来就是新增，必须撤销。",
+"",
+"## 不作为改写理由（禁止据此改文字）",
+"句长/段长不参差（实测无差异）；单字虚词偏少（方向是补不是删，且无法验收）；反复写全称少用代词（人类更常重复名词）；被动句；名词化、长句本身；正文里的「首先……其次」；句内同构排比（「提升效率，降低成本，优化体验」人类用得不比AI少）；问句、设问、问句小标题（人类远多于AI，删掉更不像人写）；比喻本身、比喻独立成段（人类用得比AI多）；抽象名词配具体动词。对话体、口语体、引用他人原文、代码块、外语段落一律不动。",
+"",
+"## 改写规则（按优先级）",
+"### 1. 翻案腔（R=3.4）",
+"先立一个读者并没有的误解再推翻：不是……而是……／并非……而是……／不在于……而在于……／与其说……不如说……／表面……实际……／看似……实则……／你以为……其实……／说到底／答案恰恰相反／A不重要，重要的是B。改法：直接从正面下判断，先给判断，再给依据。例：「真正的壁垒不是技术，而是认知」→「真正的壁垒是认知」。",
+"### 2. 顿号罗列过密（R=1.8）",
+"一个分句内两个以上顿号串起三项以上并列。改法：能概括就别逐项列举（「采集、存储、展示」→「从采集到展示」）；必须保留三项以上时改变其中一项的句法。不改：必须完整列出的清单（法规条目、配置项）；Markdown列表内部；句内同构排比。",
+"### 3. 相邻句结构同款（R=2.0）",
+"相邻两句以上逗号数量相同、成分顺序相同、长度接近，像在填表。改法：打散其中一句的句法——合并、拆分、换语序或改短句。一段里三个以上平级案例在凑数时，合并同类项或把次要的压成半句，信息不能删。叙事推进（先发生什么、怎么做、结果如何）不算，不要动。",
+"### 4. 破折号滥用（R=3.0）",
+"破折号制造停顿后的揭晓或插入不必要补充。改法：直接写完整句子，或改用逗号和句号。例：「答案其实很简单——专注」→「答案是专注」。",
+"### 5. 冒号滥用（R=3.8/9.4）",
+"形态一·提示语冒号：冒号前是「一句话总结／核心是／关键在于／原因如下／结论／本质上／换句话说」。提示语不承担信息时删掉直接写内容（「一句话总结：这个方案成本太高」→「这个方案成本太高」）；提示语在承接上文时保留，只把冒号换成句号或逗号。形态二·空转句引列表：一句话只用来宣布下面有列表、以冒号收尾。改法：把这句话写成有内容的判断（「我见过的几种典型场景：」→「这几种场景我都见过」），或删掉让列表接上上文。不改：引出直接引语的冒号、小标题里的冒号、列表项内部冒号、句中总说加分说的冒号、网址代码。",
+"### 6. 序数词当小标题（R=3.1）",
+"小标题以「一、二、三」或「第一、第二」编号且连续三个以上。改法：删掉编号，保留小标题原有文字，不改措辞、顺序或层级。不改：正文里的「首先……其次」；按步骤/法规组织的编号（「见第三条」）；Markdown有序列表。",
+"### 7. 拟人化喻体（R=7.3）",
+"把工具系统比作理想化的人：像一位智慧的导师／永不疲倦的审查员／贴身的数字秘书。触发：「像/相当于+一个/一位+职业角色」且带褒义修饰或后接「不仅……更……」。改法：换成这东西实际做了什么。例：「它就像一位智慧的导师，不仅传授结论，更传授看待世界的多元视角」→「它不只给结论，也讲看待问题的不同角度」。具体的人当喻体（像一位老师傅）不改。",
+"### 8. 概括覆盖已有数据（反向0.35）",
+"原文已给具体数字、时间或事实时，不许用概括表述盖掉。触发：句中「显著提升／大幅增长／明显改善／效率的提升」而同段已有对应具体数值。改法：把具体值提到概括词位置。「完成了对……的……／实现了……的提升／进行了……的优化」恢复动词：「公司进行了组织架构的调整」→「公司调整了组织架构」。原文没数据时只恢复动词，禁止编数字。",
+"### 9. 禁用起手式（R=3.2）",
+"不用「说白了」「说穿了」「先说结论」。删掉后直接给判断。",
+"### 10. 翻译腔（只处理五种，R=2.6-5.3）",
+"a) 过长前置定语：中心名词前修饰超过十五字或「的」连续两个以上，拆成两个分句；「……的……的……」连用改紧凑（「对系统的稳定性的检查」→「检查系统稳定性」）。b) 「当……时」前置从句：删掉「当」和「时」（「当所有人都能用AI写文章时，内容不再是竞争优势」→「所有人都能用AI写文章，内容不再是竞争优势」）。c) 前置话题壳：「对于……来说／对……而言／就……而言／关于……／在……方面」且后面本就以该对象为主语，把对象放到主语位（「对于早期团队来说，招人是最难的事」→「早期团队最难的事是招人」）。d) 句首连接词：然而／因此／此外／与此同时／换言之／总而言之放开头时，移到主语后或换成「不过／其实／也」。e) 「这意味着／这表明／这说明／换句话说」复述前句：并入前一句或删掉提示语。专业术语、法律文本、公文固定表达不动。",
+"### 11. 段首零回指评论（R=4.4，区分力最强）",
+"非首段以「听起来／看起来／说白了／值得注意的是／更重要的是／关键在于／问题在于／意味着／不难看出」等评论语开头且没有「这／那／其／此」回指成分。改法：多数情况加一个「这」字即可，或点明评论对象。首段不改；已有回指不改；对话引语内部不改。",
+"",
+"## 最终验收",
+"每一处改动对应某条编号规则；改动限于最小范围；未命中句子逐字保留；结构框架完全不动；限定词不被抹掉；改写后每个实词能在原文指出出处。直接输出改写后的全文，不要输出任何解释、前言或结语，不要用代码块包裹。"
+].join("\n");
+
+const aiCfg={preset:"deepseek"};
+function loadCfg(){
+  try{ const c=JSON.parse(localStorage.getItem("lat-cfg")||"{}"); Object.assign(aiCfg,c); }catch(e){}
+  $("cfg-preset").value=aiCfg.preset||"deepseek";
+  const p=PRESETS[aiCfg.preset];
+  $("cfg-base").value=aiCfg.base||p.base||"";
+  $("cfg-model").value=aiCfg.model||p.model||"";
+  $("cfg-key").value=aiCfg.key||"";
+}
+function saveCfg(){
+  aiCfg.preset=$("cfg-preset").value;
+  aiCfg.base=$("cfg-base").value.trim();
+  aiCfg.model=$("cfg-model").value.trim();
+  aiCfg.key=$("cfg-key").value.trim();
+  localStorage.setItem("lat-cfg",JSON.stringify(aiCfg));
+}
+$("cfg-preset").addEventListener("change",()=>{
+  const p=PRESETS[$("cfg-preset").value];
+  if(p.base)$("cfg-base").value=p.base;
+  if(p.model)$("cfg-model").value=p.model;
+  saveCfg();
+});
+["cfg-base","cfg-model","cfg-key"].forEach(id=>$(id).addEventListener("change",saveCfg));
+
+let aiAbort=null;
+$("btn-ai-run").addEventListener("click",async()=>{
+  const text=inputEl.value.trim();
+  if(!text){ $("ai-status").textContent="请先在左侧粘贴原文"; return; }
+  saveCfg();
+  if(!aiCfg.base||!aiCfg.model){ $("ai-status").textContent="请先配置接口地址和模型（右上角 ⚙ API 设置）"; return; }
+  if(!aiCfg.key&&!PRESETS[aiCfg.preset].nokey){ $("ai-status").textContent="请先填写 API Key"; return; }
+  $("ai-origin").textContent=text;
+  const out=$("ai-output");
+  out.textContent="";
+  $("btn-ai-run").disabled=true; $("btn-ai-stop").disabled=false;
+  $("ai-status").innerHTML='<span class="spinner"></span> 改写中…';
+  aiAbort=new AbortController();
+  const started=Date.now();
+  try{
+    const res=await fetch(aiCfg.base.replace(/\/+$/,"")+"/chat/completions",{
+      method:"POST",
+      signal:aiAbort.signal,
+      headers:{
+        "Content-Type":"application/json",
+        ...(aiCfg.key?{"Authorization":"Bearer "+aiCfg.key}:{})
+      },
+      body:JSON.stringify({
+        model:aiCfg.model,
+        stream:true,
+        temperature:0.3,
+        messages:[
+          {role:"system",content:SYSTEM_PROMPT},
+          {role:"user",content:"按规则改写以下文本，只输出改写后的全文：\n\n"+text}
+        ]
+      })
+    });
+    if(!res.ok){
+      const t=await res.text().catch(()=>"" );
+      throw new Error("HTTP "+res.status+" "+t.slice(0,300));
+    }
+    const reader=res.body.getReader();
+    const dec=new TextDecoder();
+    let buf="", full="";
+    while(true){
+      const {done,value}=await reader.read();
+      if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      const lines=buf.split("\n"); buf=lines.pop();
+      for(const line of lines){
+        const l=line.trim();
+        if(!l.startsWith("data:"))continue;
+        const data=l.slice(5).trim();
+        if(data==="[DONE]")continue;
+        try{
+          const j=JSON.parse(data);
+          const d=j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content;
+          if(d){ full+=d; out.textContent=full; out.scrollTop=out.scrollHeight; }
+        }catch(e){}
+      }
+    }
+    const secs=((Date.now()-started)/1000).toFixed(1);
+    $("ai-status").textContent="完成 · 用时 "+secs+" 秒 · 输出 "+full.length+" 字";
+    // 简单对比：对结果再跑一遍本地检测
+    const before=ruleDetect(text).length, after=ruleDetect(full).length;
+    $("ai-progress").textContent="本地引擎复核：改写前命中 "+before+" 处 → 改写后命中 "+after+" 处"+(after<before?"（AI 味下降）":"（建议人工再看一遍问题清单）");
+  }catch(err){
+    if(err.name==="AbortError"){ $("ai-status").textContent="已停止"; }
+    else{
+      $("ai-status").textContent="";
+      out.innerHTML='<div class="empty" style="color:#b91c1c">请求失败：'+esc(String(err.message||err))+'</div><div class="empty" style="font-size:12px">常见原因：Key 无效 / 服务商不支持浏览器跨域 (CORS) / 接口地址不对。可换 Ollama 本地模型或支持 CORS 的服务商。</div>';
+    }
+  }finally{
+    $("btn-ai-run").disabled=false; $("btn-ai-stop").disabled=true;
+    aiAbort=null;
+  }
+});
+$("btn-ai-stop").addEventListener("click",()=>{ if(aiAbort)aiAbort.abort(); });
+$("btn-copy").addEventListener("click",async()=>{
+  const t=$("ai-output").textContent;
+  if(!t)return;
+  try{ await navigator.clipboard.writeText(t); $("ai-status").textContent="已复制到剪贴板"; }
+  catch(e){ const ta=document.createElement("textarea"); ta.value=t; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); $("ai-status").textContent="已复制到剪贴板"; }
+});
+$("btn-download").addEventListener("click",()=>{
+  const t=$("ai-output").textContent;
+  if(!t)return;
+  const blob=new Blob([t],{type:"text/markdown;charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="去AI味-改写结果.md";
+  a.click(); URL.revokeObjectURL(a.href);
+});
+
+/* ---------------- Tab 切换 ---------------- */
+document.querySelectorAll(".tab[data-tab]").forEach(t=>{
+  t.addEventListener("click",()=>{
+    document.querySelectorAll(".tab[data-tab]").forEach(x=>x.classList.remove("active"));
+    t.classList.add("active");
+    const v=t.dataset.tab==="detect";
+    $("pane-detect").style.display=v?"flex":"none";
+    $("pane-ai").style.display=v?"none":"flex";
+    if(!v)$("ai-settings").classList.toggle("open",false);
+  });
+});
+$("tab-settings").addEventListener("click",()=>{
+  document.querySelector('.tab[data-tab="ai"]').click();
+  $("ai-settings").classList.add("open");
+});
+
+/* ---------------- 其他交互 ---------------- */
+$("btn-detect").addEventListener("click",renderDetect);
+inputEl.addEventListener("input",()=>{ $("char-count").textContent=inputEl.value.length+" 字"; });
+$("btn-clear").addEventListener("click",()=>{ inputEl.value=""; $("char-count").textContent="0 字"; detectView.innerHTML='<div class="empty">粘贴原文后点击「开始检测」</div>'; findingsView.innerHTML=""; statsEl.style.display="none"; $("ai-output").innerHTML='<div class="empty">在左侧粘贴原文，点「开始 AI 改写」</div>'; });
+$("btn-about").addEventListener("click",()=>$("dlg-about").showModal());
+$("btn-load-sample").addEventListener("click",()=>{
+  inputEl.value="说白了，好的产品不是功能的堆砌，而是对用户时间的尊重。这听起来像一句正确的废话，但它决定了我们接下来要做的一切。\n\n一、先别急着加功能\n\n当团队讨论新版本方向时，我们首先想到的是加东西：仪表盘、积分体系、勋章、排行榜、周报、AI 摘要。看似丰富了产品，实则稀释了核心。\n\n二、把核心做顺\n\n新版本实现了效率的提升。处理时间从两小时缩短到四十分钟。\n\n三、结论\n\n它就像一位智慧的导师，不仅告诉你做什么，更教会你为什么这么做。这意味着产品的价值不在清单的长度，而在每一次打开后的确定感。值得注意的是，留存率涨到了 72%。";
+  $("char-count").textContent=inputEl.value.length+" 字";
+  renderDetect();
+  document.querySelector('.tab[data-tab="detect"]').click();
+});
+
+/* 拖拽文件 */
+const dz=$("drop-zone");
+dz.addEventListener("dragover",e=>{e.preventDefault();dz.style.borderColor="var(--accent)";});
+dz.addEventListener("dragleave",()=>{dz.style.borderColor="";});
+dz.addEventListener("drop",e=>{
+  e.preventDefault(); dz.style.borderColor="";
+  const f=e.dataTransfer.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{ inputEl.value=r.result; $("char-count").textContent=inputEl.value.length+" 字"; renderDetect(); };
+  r.readAsText(f,"utf-8");
+});
+
+loadCfg();
+</script>
+</body>
+</html>
