@@ -4,7 +4,7 @@
 
 单文件、无依赖、免安装。检测全程在本地运行，文本不上传。AI 改写走你自己的 API Key，浏览器直连服务商。
 
-![主界面](https://cdn.jsdelivr.net/gh/wyfirstname/less-ai-tone-ui@main/screenshots/01-home.png)
+![主界面](screenshots/01-home.png)
 
 ## 它解决的问题
 
@@ -18,11 +18,11 @@
 
 粘贴或拖入 `.md` / `.txt`，按 11 条规则的触发标记逐段扫描，命中的片段标红，点击查看规则编号、实测倍率 R 与改法建议。
 
-![检测高亮](https://cdn.jsdelivr.net/gh/wyfirstname/less-ai-tone-ui@main/screenshots/02-detect-highlight.png)
+![检测高亮](screenshots/02-detect-highlight.png)
 
 每处命中生成一张卡片：规则编号、R 值（生成侧与人类侧的频率比）、字符位置、原文引文、可执行改法。
 
-![问题清单](https://cdn.jsdelivr.net/gh/wyfirstname/less-ai-tone-ui@main/screenshots/03-findings-list.png)
+![问题清单](screenshots/03-findings-list.png)
 
 顶部统计标签里，**灰色 0 命中是有用信息**——那几项在这篇里没问题，不必硬改。
 
@@ -30,9 +30,9 @@
 
 配置任意 OpenAI 兼容服务，把完整规则集注入系统提示词，由大模型逐句执行。改写结果与原文双栏对照，改完自动用本地引擎复核命中数变化。
 
-![AI 改写与设置](https://cdn.jsdelivr.net/gh/wyfirstname/less-ai-tone-ui@main/screenshots/04-ai-settings.png)
+![AI 改写与设置](screenshots/04-ai-settings.png)
 
-![改写对照](https://cdn.jsdelivr.net/gh/wyfirstname/less-ai-tone-ui@main/screenshots/06-compare.png)
+![改写对照](screenshots/06-compare.png)
 
 ## 快速开始
 
@@ -89,7 +89,7 @@ cd less-ai-tone-ui
 index.html                    主程序（单文件，含 11 条规则引擎与提示词）
 start.bat                     Windows 双击启动
 使用说明.txt                   面向非技术用户的说明
-screenshots/                  界面截图（README 通过 jsDelivr 引用）
+screenshots/                  界面截图（README 用相对路径引用）
 博文-去AI味工具发布.md          发布用博文
 LICENSE                       MIT
 ```
